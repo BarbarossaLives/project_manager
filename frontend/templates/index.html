@@ -1,0 +1,27 @@
+<!-- frontend/templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Project Tracker</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <h1>Project Tracker</h1>
+
+  {% for project in projects %}
+    <div class="project">
+      <h2>{{ project.title }}</h2>
+      <p>{{ project.description }}</p>
+      <ul>
+        {% for task in project.tasks %}
+          <li>
+            {{ task.title }} – 
+            {% if task.completed %} ✅ {% else %} ⏳ {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endfor %}
+</body>
+</html>

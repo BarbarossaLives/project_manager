@@ -1,19 +1,34 @@
 # backend/main.py
-from fastapi import FastAPI
-# backend/main.py
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
-from fastapi import FastAPI
 from backend.database import engine
 from backend.models import models
 from backend.routes import projects, tasks
+from backend.dependencies import get_db
+
+from sqlalchemy.orm import Session
+from fastapi import Depends
 
 app = FastAPI()
 
-models.Base.metadata.create_all(bind=engine)
+# Mount static files
+app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 
+# Configure Jinja2 templates
+templates = Jinja2Templates(directory="frontend/templates")
+
+# Include API routes
 app.include_router(projects.router)
 app.include_router(tasks.router)
 
-@app.get("/")
-def read_root():
-    return {"message": "Project Tracker API is running"}
+# Initialize DB
+models.Base.metadata.create_all(bind=engine)
+
+# Serve Home Page
+@app.get("/", response_class=HTMLResponse)
+def get_home(request: Request, db: Session = Depends(get_db)):
+    projects = db.query(models.Project).all()
+    return templates.TemplateResponse("index.html", {"request": request, "projects": projects})
