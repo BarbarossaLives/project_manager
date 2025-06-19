@@ -23,5 +23,74 @@
       </ul>
     </div>
   {% endfor %}
+
+    <!-- Add Project Form -->
+    <h2>Create New Project</h2>
+    <form action="/projects/create" method="post">
+    <input type="text" name="title" placeholder="Project title" required>
+    <input type="text" name="description" placeholder="Description">
+    <button type="submit">Add Project</button>
+    </form>
+
+    <!-- Add Task Form -->
+    <h2>Create New Task</h2>
+    <form action="/tasks/create" method="post">
+    <input type="text" name="title" placeholder="Task title" required>
+    <select name="project_id">
+        {% for project in projects %}
+        <option value="{{ project.id }}">{{ project.title }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit">Add Task</button>
+    </form>
+
+
+    <h2>Pomodoro Timer</h2>
+    <div id="timer">
+    <p id="time-display">25:00</p>
+    <button onclick="startTimer()">Start</button>
+    <button onclick="stopTimer()">Stop</button>
+    <button onclick="resetTimer()">Reset</button>
+    </div>
+
+    <script>
+    let timer;
+    let timeLeft = 25 * 60;
+
+    function updateDisplay() {
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        document.getElementById("time-display").textContent =
+        `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    function startTimer() {
+        if (!timer) {
+        timer = setInterval(() => {
+            if (timeLeft > 0) {
+            timeLeft--;
+            updateDisplay();
+            } else {
+            clearInterval(timer);
+            alert("Time's up!");
+            }
+        }, 1000);
+        }   
+    }
+
+    function stopTimer() {
+        clearInterval(timer);
+        timer = null;
+    }
+
+    function resetTimer() {
+        stopTimer();
+        timeLeft = 25 * 60;
+        updateDisplay();
+    }
+
+    updateDisplay(); // initialize on load
+    </script>
+
 </body>
 </html>

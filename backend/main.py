@@ -32,3 +32,13 @@ models.Base.metadata.create_all(bind=engine)
 def get_home(request: Request, db: Session = Depends(get_db)):
     projects = db.query(models.Project).all()
     return templates.TemplateResponse("index.html", {"request": request, "projects": projects})
+
+@app.post("/projects/create")
+async def form_router(request: Request):
+    from backend.routes.projects import create_project_form
+    return await create_project_form(request)
+
+@app.post("/tasks/create")
+async def form_router(request: Request):
+    from backend.routes.tasks import create_task_form
+    return await create_task_form(request)
