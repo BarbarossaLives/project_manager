@@ -1,96 +1,1667 @@
 <!-- frontend/templates/index.html -->
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Project Tracker</title>
-  <link rel="stylesheet" href="/static/css/style.css">
-</head>
-<body>
-  <h1>Project Tracker</h1>
-
-  {% for project in projects %}
-    <div class="project">
-      <h2>{{ project.title }}</h2>
-      <p>{{ project.description }}</p>
-      <ul>
-        {% for task in project.tasks %}
-          <li>
-            {{ task.title }} – 
-            {% if task.completed %} ✅ {% else %} ⏳ {% endif %}
-          </li>
-        {% endfor %}
-      </ul>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Project Tracker</title>
+    <link rel="stylesheet" href="/static/css/style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="header">
+      <div class="container">
+        <h1>Project Tracker</h1>
+      </div>
     </div>
-  {% endfor %}
 
-    <!-- Add Project Form -->
-    <h2>Create New Project</h2>
-    <form action="/projects/create" method="post">
-    <input type="text" name="title" placeholder="Project title" required>
-    <input type="text" name="description" placeholder="Description">
-    <button type="submit">Add Project</button>
-    </form>
+    <div class="container">
+      <!-- Projects Section -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">📋 Active Projects</h2>
+          <span class="badge badge-info">{{ projects|length }} projects</span>
+        </div>
+        <div class="card-content">
+          {% for project in projects %}
+          <div class="project fade-in">
+            <h2>{{ project.title }}</h2>
+            <p>{{ project.description }}</p>
+            {% if project.tasks %}
+            <ul class="task-list">
+              {% for task in project.tasks %}
+              <li class="task-item">
+                <span class="task-status {% if task.completed %}task-completed{% else %}task-pending{% endif %}">
+                  {% if task.completed %} ✅ {% else %} ⏳ {% endif %}
+                </span>
+                <span class="task-title">{{ task.title }}</span>
+                {% if task.completed %}
+                  <span class="badge badge-success">Complete</span>
+                {% else %}
+                  <span class="badge badge-warning">Pending</span>
+                {% endif %}
+              </li>
+              {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-secondary">No tasks yet. Add some tasks to get started!</p>
+            {% endif %}
+          </div>
+          {% else %}
+          <div class="text-center">
+            <p class="text-secondary">No projects yet. Create your first project below!</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
 
-    <!-- Add Task Form -->
-    <h2>Create New Task</h2>
-    <form action="/tasks/create" method="post">
-    <input type="text" name="title" placeholder="Task title" required>
-    <select name="project_id">
-        {% for project in projects %}
-        <option value="{{ project.id }}">{{ project.title }}</option>
-        {% endfor %}
-    </select>
-    <button type="submit">Add Task</button>
-    </form>
+      <!-- Today's Schedule -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">📅 Today's Schedule</h3>
+          <div class="schedule-controls">
+            <button class="btn-small btn-primary" onclick="showDailySchedule('{{ today_date }}')">
+              📋 Full Day View
+            </button>
+            <button class="btn-small btn-secondary" onclick="showWeeklySchedule('{{ today_date }}')">
+              📊 Week View
+            </button>
+            <button class="btn-small btn-success" onclick="showProjectSteps()">
+              🎯 Project Steps
+            </button>
+          </div>
+        </div>
+        <div class="card-content">
+          {% if today_events %}
+          <div class="today-events">
+            <h4>🎯 Today's Events</h4>
+            {% for event in today_events %}
+            <div class="schedule-item event-item">
+              <div class="schedule-time">
+                {% if event.all_day %}
+                  All Day
+                {% else %}
+                  {{ event.start_time.strftime('%H:%M') }}
+                  {% if event.end_time %}
+                    - {{ event.end_time.strftime('%H:%M') }}
+                  {% endif %}
+                {% endif %}
+              </div>
+              <div class="schedule-content">
+                <div class="schedule-title">{{ event.title }}</div>
+                {% if event.description %}
+                  <div class="schedule-description">{{ event.description }}</div>
+                {% endif %}
+                {% if event.location %}
+                  <div class="schedule-location">📍 {{ event.location }}</div>
+                {% endif %}
+                <div class="schedule-meta">
+                  <span class="badge badge-{{ 'success' if event.priority == 'high' else 'info' if event.priority == 'medium' else 'warning' }}">
+                    {{ event.priority }} priority
+                  </span>
+                  {% if event.project %}
+                    <span class="badge badge-info">{{ event.project.title }}</span>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="schedule-actions">
+                {% if not event.completed %}
+                  <button class="btn-small btn-success" onclick="completeEvent({{ event.id }})">✅</button>
+                {% else %}
+                  <span class="badge badge-success">Done</span>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
 
+          {% if upcoming_events %}
+          <div class="upcoming-events">
+            <h4>⏰ Upcoming This Week</h4>
+            {% for event in upcoming_events %}
+            <div class="schedule-item upcoming-item">
+              <div class="schedule-time">
+                {{ event.start_time.strftime('%a %m/%d %H:%M') }}
+              </div>
+              <div class="schedule-content">
+                <div class="schedule-title">{{ event.title }}</div>
+                {% if event.location %}
+                  <div class="schedule-location">📍 {{ event.location }}</div>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
 
-    <h2>Pomodoro Timer</h2>
-    <div id="timer">
-    <p id="time-display">25:00</p>
-    <button onclick="startTimer()">Start</button>
-    <button onclick="stopTimer()">Stop</button>
-    <button onclick="resetTimer()">Reset</button>
-    </div>
+          {% if not today_events and not upcoming_events %}
+          <p class="text-secondary">No events scheduled. Create your first event below!</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Pomodoro Timer -->
+      <div class="timer-container">
+        <h2>🍅 Pomodoro Timer</h2>
+        <div class="timer-display" id="time-display">25:00</div>
+        <div class="timer-controls">
+          <button class="timer-btn" onclick="startTimer()">▶️ Start</button>
+          <button class="timer-btn" onclick="stopTimer()">⏸️ Pause</button>
+          <button class="timer-btn" onclick="resetTimer()">🔄 Reset</button>
+        </div>
+      </div>
+
+      <!-- Dashboard Grid -->
+      <div class="dashboard-grid">
+        <!-- Add Event -->
+        <div class="form-section">
+          <h2>📅 Add Event</h2>
+          <form action="/events/create" method="post">
+            <div class="form-group">
+              <input type="text" name="title" placeholder="Event title" required />
+            </div>
+            <div class="form-group">
+              <textarea name="description" rows="2" placeholder="Event description (optional)"></textarea>
+            </div>
+            <div class="form-row">
+              <input type="date" name="start_date" required />
+              <input type="time" name="start_time" value="09:00" />
+              <input type="time" name="end_time" placeholder="End time" />
+            </div>
+            <div class="form-row">
+              <select name="event_type">
+                <option value="personal">Personal</option>
+                <option value="meeting">Meeting</option>
+                <option value="deadline">Deadline</option>
+                <option value="appointment">Appointment</option>
+                <option value="reminder">Reminder</option>
+              </select>
+              <select name="priority">
+                <option value="medium">Medium Priority</option>
+                <option value="high">High Priority</option>
+                <option value="low">Low Priority</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <input type="text" name="location" placeholder="Location (optional)" />
+            </div>
+            <div class="form-row">
+              <select name="project_id">
+                <option value="">No project</option>
+                {% for project in projects %}
+                <option value="{{ project.id }}">{{ project.title }}</option>
+                {% endfor %}
+              </select>
+              <label>
+                <input type="checkbox" name="all_day" /> All day event
+              </label>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Event</button>
+          </form>
+        </div>
+
+        <!-- Add Devlog Entry -->
+        <div class="form-section">
+          <h2>📝 Add Devlog Entry</h2>
+          <form action="/devlogs/create" method="post">
+            <div class="form-group">
+              <textarea
+                name="entry_text"
+                rows="4"
+                placeholder="What did you accomplish today?"
+                required
+              ></textarea>
+            </div>
+            <div class="form-group">
+              <select name="project_id" required>
+                <option value="">Select a project</option>
+                {% for project in projects %}
+                <option value="{{ project.id }}">{{ project.title }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Entry</button>
+          </form>
+        </div>
+
+        <!-- Social Media Reminders -->
+        <div class="form-section">
+          <h2>🔔 Social Media Reminders</h2>
+
+          <!-- Auto-generate reminders -->
+          <div class="form-group">
+            <button type="button" class="btn btn-success" onclick="autoGenerateReminders()">
+              🤖 Auto-Generate Weekly Reminders
+            </button>
+          </div>
+
+          <!-- Quick reminder for projects -->
+          {% if projects %}
+          <div class="form-group">
+            <label>Quick Reminder for Project:</label>
+            <div class="form-row">
+              <select id="quick-project-select">
+                {% for project in projects %}
+                <option value="{{ project.id }}">{{ project.title }}</option>
+                {% endfor %}
+              </select>
+              <button type="button" class="btn btn-warning" onclick="createQuickReminder()">
+                ⚡ Remind in 7 days
+              </button>
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Manual reminder form -->
+          <details>
+            <summary style="cursor: pointer; margin-bottom: 1rem;">
+              <strong>📝 Create Custom Reminder</strong>
+            </summary>
+            <form action="/reminders/create" method="post">
+              <div class="form-group">
+                <input
+                  type="text"
+                  name="message"
+                  placeholder="Custom reminder message"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <input type="datetime-local" name="due_date" required />
+              </div>
+              <button type="submit" class="btn btn-primary">Set Custom Reminder</button>
+            </form>
+          </details>
+        </div>
+
+        <!-- AI Project Planning -->
+        <div class="form-section ai-planning-section">
+          <h2>🤖 AI Project Planning</h2>
+
+          <!-- AI Project Creation -->
+          <div class="ai-feature">
+            <h3>Create AI-Powered Project</h3>
+            <form id="ai-project-form">
+              <div class="form-group">
+                <input type="text" id="ai-project-title" placeholder="Project title (optional)" />
+              </div>
+              <div class="form-group">
+                <textarea
+                  id="ai-project-description"
+                  rows="3"
+                  placeholder="Describe your project idea in detail. The AI will create a comprehensive plan with tasks, milestones, and timeline."
+                  required
+                ></textarea>
+              </div>
+              <button type="button" class="btn btn-success" onclick="createAIProject()">
+                🧠 Generate AI Project Plan
+              </button>
+            </form>
+          </div>
+
+          <!-- Project Analysis -->
+          {% if projects %}
+          <div class="ai-feature">
+            <h3>Analyze Project Progress</h3>
+            <div class="form-row">
+              <select id="analyze-project-select">
+                {% for project in projects %}
+                <option value="{{ project.id }}">{{ project.title }}</option>
+                {% endfor %}
+              </select>
+              <button type="button" class="btn btn-warning" onclick="analyzeProject()">
+                📊 AI Analysis
+              </button>
+            </div>
+          </div>
+
+          <!-- Schedule Adjustment -->
+          <div class="ai-feature">
+            <h3>Auto-Adjust Schedule</h3>
+            <div class="form-group">
+              <select id="adjust-project-select">
+                {% for project in projects %}
+                <option value="{{ project.id }}">{{ project.title }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <input type="text" id="delay-reason" placeholder="Reason for delay (optional)" />
+            </div>
+            <button type="button" class="btn btn-danger" onclick="adjustSchedule()">
+              ⏰ Auto-Adjust Schedule
+            </button>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Traditional Project Form -->
+        <div class="form-section">
+          <h2>🚀 Create Traditional Project</h2>
+          <form action="/projects/create" method="post">
+            <div class="form-group">
+              <input type="text" name="title" placeholder="Project title" required />
+            </div>
+            <div class="form-group">
+              <input type="text" name="description" placeholder="Project description" />
+            </div>
+            <button type="submit" class="btn btn-primary">Add Project</button>
+          </form>
+        </div>
+
+        <!-- Smart Task Management -->
+        <div class="form-section">
+          <h2>✅ Smart Task Management</h2>
+
+          <!-- AI Task Breakdown -->
+          <div class="ai-feature">
+            <h3>Break Down Complex Task</h3>
+            <div class="form-group">
+              <textarea
+                id="task-breakdown-description"
+                rows="2"
+                placeholder="Describe a complex task to break down into subtasks"
+              ></textarea>
+            </div>
+            {% if projects %}
+            <div class="form-group">
+              <select id="task-breakdown-project">
+                <option value="">Select project (optional)</option>
+                {% for project in projects %}
+                <option value="{{ project.id }}">{{ project.title }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            {% endif %}
+            <button type="button" class="btn btn-success" onclick="breakDownTask()">
+              🧩 AI Task Breakdown
+            </button>
+          </div>
+
+          <!-- Traditional Task Form -->
+          <details>
+            <summary style="cursor: pointer; margin-bottom: 1rem;">
+              <strong>➕ Create Manual Task</strong>
+            </summary>
+            <form action="/tasks/create" method="post">
+              <div class="form-group">
+                <input type="text" name="title" placeholder="Task title" required />
+              </div>
+              <div class="form-group">
+                <select name="project_id" required>
+                  <option value="">Select a project</option>
+                  {% for project in projects %}
+                  <option value="{{ project.id }}">{{ project.title }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary">Add Task</button>
+            </form>
+          </details>
+        </div>
+      </div>
+
+      <!-- AI Insights Panel -->
+      <div id="ai-insights-panel" class="card" style="display: none;">
+        <div class="card-header">
+          <h3 class="card-title">🧠 AI Insights</h3>
+          <button class="btn-small btn-secondary" onclick="closeInsights()">✕</button>
+        </div>
+        <div class="card-content">
+          <div id="ai-insights-content">
+            <!-- AI insights will be loaded here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Schedule Modal -->
+      <div id="schedule-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3 id="schedule-modal-title">Daily Schedule</h3>
+            <button class="btn-small btn-secondary" onclick="closeScheduleModal()">✕</button>
+          </div>
+          <div class="modal-body">
+            <div id="schedule-content">
+              <!-- Schedule content will be loaded here -->
+            </div>
+          </div>
+        </div>
+      </div>
 
     <script>
-    let timer;
-    let timeLeft = 25 * 60;
+      let timer;
+      let timeLeft = 25 * 60;
 
-    function updateDisplay() {
+      function updateDisplay() {
         const minutes = Math.floor(timeLeft / 60);
         const seconds = timeLeft % 60;
-        document.getElementById("time-display").textContent =
-        `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    }
+        document.getElementById("time-display").textContent = `${String(
+          minutes
+        ).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+      }
 
-    function startTimer() {
+      function startTimer() {
         if (!timer) {
-        timer = setInterval(() => {
+          timer = setInterval(() => {
             if (timeLeft > 0) {
-            timeLeft--;
-            updateDisplay();
+              timeLeft--;
+              updateDisplay();
             } else {
-            clearInterval(timer);
-            alert("Time's up!");
+              clearInterval(timer);
+              alert("Time's up!");
             }
-        }, 1000);
-        }   
-    }
+          }, 1000);
+        }
+      }
 
-    function stopTimer() {
+      function stopTimer() {
         clearInterval(timer);
         timer = null;
-    }
+      }
 
-    function resetTimer() {
+      function resetTimer() {
         stopTimer();
         timeLeft = 25 * 60;
         updateDisplay();
-    }
+      }
 
-    updateDisplay(); // initialize on load
+      updateDisplay(); // initialize on load
+
+      // Automatic reminder functions
+      async function autoGenerateReminders() {
+        try {
+          const response = await fetch('/reminders/auto-generate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            }
+          });
+
+          if (response.ok) {
+            alert('✅ Auto-generated weekly reminders created!');
+            location.reload();
+          } else {
+            alert('❌ Failed to generate reminders');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('❌ Error generating reminders');
+        }
+      }
+
+      async function createQuickReminder() {
+        const projectSelect = document.getElementById('quick-project-select');
+        const projectId = projectSelect.value;
+
+        if (!projectId) {
+          alert('Please select a project');
+          return;
+        }
+
+        try {
+          const response = await fetch(`/reminders/quick-create/${projectId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'days_ahead=7'
+          });
+
+          if (response.ok) {
+            alert('✅ Quick reminder created for 7 days from now!');
+            location.reload();
+          } else {
+            alert('❌ Failed to create reminder');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('❌ Error creating reminder');
+        }
+      }
+
+      async function generateContent(reminderId) {
+        // For now, just show an alert. In a real implementation,
+        // this would open a modal with generated social media content
+        try {
+          // This is a placeholder - you'd need to associate reminders with projects
+          // to generate specific content
+          alert('🚀 Social media content generated! Check your clipboard or a modal would open here with the content.');
+        } catch (error) {
+          console.error('Error:', error);
+          alert('❌ Error generating content');
+        }
+      }
+
+      // AI Planning Functions
+      async function createAIProject() {
+        const title = document.getElementById('ai-project-title').value;
+        const description = document.getElementById('ai-project-description').value;
+
+        if (!description.trim()) {
+          alert('Please provide a project description');
+          return;
+        }
+
+        try {
+          showLoading('Creating AI project plan...');
+
+          const formData = new FormData();
+          formData.append('project_title', title);
+          formData.append('project_description', description);
+
+          const response = await fetch('/ai/create-project-plan', {
+            method: 'POST',
+            body: formData
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            alert('🎉 AI project plan created successfully!');
+            location.reload();
+          } else {
+            console.error('AI Error Details:', result);
+            if (result.error) {
+              alert(`❌ Error: ${result.error}`);
+            } else {
+              alert('❌ Unexpected error creating project plan');
+            }
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('❌ Error creating AI project plan');
+        } finally {
+          hideLoading();
+        }
+      }
+
+      async function analyzeProject() {
+        const projectSelect = document.getElementById('analyze-project-select');
+        const projectId = projectSelect.value;
+
+        if (!projectId) {
+          alert('Please select a project');
+          return;
+        }
+
+        try {
+          showLoading('Analyzing project...');
+
+          const response = await fetch(`/ai/analyze-project/${projectId}`, {
+            method: 'POST'
+          });
+
+          const analysis = await response.json();
+
+          if (analysis.error) {
+            console.error('Analysis Error Details:', analysis);
+            alert(`❌ Error: ${analysis.error}`);
+            if (analysis.raw_response) {
+              console.log('Raw AI Response:', analysis.raw_response);
+            }
+          } else {
+            showAIInsights(analysis, 'Project Analysis');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('❌ Error analyzing project');
+        } finally {
+          hideLoading();
+        }
+      }
+
+      async function adjustSchedule() {
+        const projectSelect = document.getElementById('adjust-project-select');
+        const projectId = projectSelect.value;
+        const delayReason = document.getElementById('delay-reason').value;
+
+        if (!projectId) {
+          alert('Please select a project');
+          return;
+        }
+
+        try {
+          showLoading('Adjusting schedule...');
+
+          const formData = new FormData();
+          formData.append('delay_reason', delayReason);
+
+          const response = await fetch(`/ai/adjust-schedule/${projectId}`, {
+            method: 'POST',
+            body: formData
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            alert(`✅ Schedule adjusted! ${result.adjustments_made.length} tasks updated.`);
+            location.reload();
+          } else {
+            alert(`❌ Error: ${result.error}`);
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('❌ Error adjusting schedule');
+        } finally {
+          hideLoading();
+        }
+      }
+
+      async function breakDownTask() {
+        const description = document.getElementById('task-breakdown-description').value;
+        const projectSelect = document.getElementById('task-breakdown-project');
+        const projectId = projectSelect ? projectSelect.value : null;
+
+        if (!description.trim()) {
+          alert('Please describe the task to break down');
+          return;
+        }
+
+        try {
+          showLoading('Breaking down task...');
+
+          const formData = new FormData();
+          formData.append('task_description', description);
+          formData.append('project_context', '');
+          if (projectId) {
+            formData.append('project_id', projectId);
+          }
+
+          const response = await fetch('/ai/break-down-task', {
+            method: 'POST',
+            body: formData
+          });
+
+          const result = await response.json();
+
+          if (result.error) {
+            alert(`❌ Error: ${result.error}`);
+          } else {
+            showAIInsights(result, 'Task Breakdown');
+            if (result.parent_task_id) {
+              alert('✅ Task broken down and added to project!');
+              location.reload();
+            }
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('❌ Error breaking down task');
+        } finally {
+          hideLoading();
+        }
+      }
+
+      // Utility functions
+      function showLoading(message) {
+        // Create or update loading overlay
+        let overlay = document.getElementById('loading-overlay');
+        if (!overlay) {
+          overlay = document.createElement('div');
+          overlay.id = 'loading-overlay';
+          overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            color: white;
+            font-size: 1.2rem;
+          `;
+          document.body.appendChild(overlay);
+        }
+        overlay.innerHTML = `
+          <div style="text-align: center;">
+            <div class="spinner" style="margin: 0 auto 1rem; width: 2rem; height: 2rem;"></div>
+            <div>${message}</div>
+          </div>
+        `;
+        overlay.style.display = 'flex';
+      }
+
+      function hideLoading() {
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) {
+          overlay.style.display = 'none';
+        }
+      }
+
+      function showAIInsights(data, title) {
+        const panel = document.getElementById('ai-insights-panel');
+        const content = document.getElementById('ai-insights-content');
+
+        let html = `<h4>${title}</h4>`;
+
+        if (data.overall_health) {
+          // Project analysis format
+          html += `
+            <div class="insight-section">
+              <h5>📊 Overall Health: <span class="badge badge-${getHealthColor(data.overall_health)}">${data.overall_health}</span></h5>
+              <p><strong>Progress Analysis:</strong> ${data.progress_analysis}</p>
+              <p><strong>Schedule Status:</strong> ${data.schedule_status}</p>
+            </div>
+          `;
+
+          if (data.recommendations && data.recommendations.length > 0) {
+            html += '<div class="insight-section"><h5>💡 Recommendations:</h5><ul>';
+            data.recommendations.forEach(rec => {
+              html += `<li><strong>${rec.type}:</strong> ${rec.action} <em>(${rec.reason})</em></li>`;
+            });
+            html += '</ul></div>';
+          }
+
+          if (data.bottlenecks && data.bottlenecks.length > 0) {
+            html += '<div class="insight-section"><h5>🚧 Bottlenecks:</h5><ul>';
+            data.bottlenecks.forEach(bottleneck => {
+              html += `<li>${bottleneck}</li>`;
+            });
+            html += '</ul></div>';
+          }
+        } else if (data.subtasks) {
+          // Task breakdown format
+          html += `
+            <div class="insight-section">
+              <h5>📋 Original Task: ${data.original_task}</h5>
+              <p><strong>Estimated Total Hours:</strong> ${data.estimated_total_hours}</p>
+            </div>
+            <div class="insight-section">
+              <h5>🧩 Subtasks:</h5>
+              <ul>
+          `;
+          data.subtasks.forEach(subtask => {
+            html += `
+              <li>
+                <strong>${subtask.title}</strong> (${subtask.estimated_hours}h)
+                <br><small>${subtask.description}</small>
+              </li>
+            `;
+          });
+          html += '</ul></div>';
+
+          if (data.notes) {
+            html += `<div class="insight-section"><h5>📝 Notes:</h5><p>${data.notes}</p></div>`;
+          }
+        }
+
+        content.innerHTML = html;
+        panel.style.display = 'block';
+        panel.scrollIntoView({ behavior: 'smooth' });
+      }
+
+      function getHealthColor(health) {
+        switch(health) {
+          case 'excellent': return 'success';
+          case 'good': return 'info';
+          case 'concerning': return 'warning';
+          case 'critical': return 'danger';
+          default: return 'info';
+        }
+      }
+
+      function closeInsights() {
+        document.getElementById('ai-insights-panel').style.display = 'none';
+      }
+
+      // Event Management Functions
+      async function completeEvent(eventId) {
+        try {
+          const response = await fetch(`/events/${eventId}/complete`, {
+            method: 'POST'
+          });
+
+          if (response.ok) {
+            location.reload();
+          } else {
+            alert('❌ Failed to complete event');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('❌ Error completing event');
+        }
+      }
+
+      // Task Management Functions
+      async function completeTask(taskId) {
+        try {
+          const response = await fetch(`/tasks/${taskId}/complete`, {
+            method: 'POST'
+          });
+
+          if (response.ok) {
+            // Update the UI immediately
+            const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+            if (taskElement) {
+              taskElement.classList.add('completed');
+              const button = taskElement.querySelector('.complete-btn');
+              if (button) {
+                button.innerHTML = '✅';
+                button.onclick = () => uncompleteTask(taskId);
+                button.classList.remove('btn-success');
+                button.classList.add('btn-secondary');
+              }
+            }
+
+            // Optionally reload to update counts
+            setTimeout(() => location.reload(), 500);
+          } else {
+            alert('❌ Failed to complete task');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('❌ Error completing task');
+        }
+      }
+
+      async function uncompleteTask(taskId) {
+        try {
+          const response = await fetch(`/tasks/${taskId}/uncomplete`, {
+            method: 'POST'
+          });
+
+          if (response.ok) {
+            // Update the UI immediately
+            const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+            if (taskElement) {
+              taskElement.classList.remove('completed');
+              const button = taskElement.querySelector('.complete-btn');
+              if (button) {
+                button.innerHTML = '⏳';
+                button.onclick = () => completeTask(taskId);
+                button.classList.remove('btn-secondary');
+                button.classList.add('btn-success');
+              }
+            }
+
+            // Optionally reload to update counts
+            setTimeout(() => location.reload(), 500);
+          } else {
+            alert('❌ Failed to uncomplete task');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('❌ Error uncompleting task');
+        }
+      }
+
+      async function showDailySchedule(date) {
+        try {
+          showLoading('Loading daily schedule...');
+
+          const response = await fetch(`/schedule/daily/${date}`);
+          const scheduleData = await response.json();
+
+          if (response.ok) {
+            displayDailySchedule(scheduleData);
+          } else {
+            alert('❌ Failed to load daily schedule');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('❌ Error loading daily schedule');
+        } finally {
+          hideLoading();
+        }
+      }
+
+      async function showWeeklySchedule(date) {
+        try {
+          showLoading('Loading weekly schedule...');
+
+          const response = await fetch(`/schedule/week/${date}`);
+          const scheduleData = await response.json();
+
+          if (response.ok) {
+            displayWeeklySchedule(scheduleData);
+          } else {
+            alert('❌ Failed to load weekly schedule');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('❌ Error loading weekly schedule');
+        } finally {
+          hideLoading();
+        }
+      }
+
+      async function showProjectSteps() {
+        try {
+          showLoading('Loading project steps...');
+
+          const response = await fetch('/schedule/project-steps');
+          const stepsData = await response.json();
+
+          if (response.ok) {
+            displayProjectSteps(stepsData);
+          } else {
+            alert('❌ Failed to load project steps');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('❌ Error loading project steps');
+        } finally {
+          hideLoading();
+        }
+      }
+
+      function displayDailySchedule(data) {
+        const modal = document.getElementById('schedule-modal');
+        const title = document.getElementById('schedule-modal-title');
+        const content = document.getElementById('schedule-content');
+
+        title.textContent = `📅 ${data.day_name} - ${data.date}`;
+
+        let html = `
+          <div class="schedule-summary">
+            <div class="summary-stats">
+              <span class="stat-item">📅 ${data.summary.total_events} events</span>
+              <span class="stat-item">📋 ${data.summary.total_tasks_due} tasks due</span>
+              <span class="stat-item">⚠️ ${data.summary.total_overdue} overdue</span>
+              <span class="stat-item">🔥 ${data.summary.high_priority_items} high priority</span>
+            </div>
+          </div>
+        `;
+
+        if (data.overdue_tasks.length > 0) {
+          html += `
+            <div class="overdue-section">
+              <h4>⚠️ Overdue Tasks</h4>
+              <div class="overdue-list">
+          `;
+          data.overdue_tasks.forEach(task => {
+            html += `
+              <div class="overdue-item">
+                <div class="overdue-title">${task.title}</div>
+                <div class="overdue-meta">
+                  Due: ${task.deadline} | Project: ${task.project_title || 'No project'}
+                </div>
+              </div>
+            `;
+          });
+          html += '</div></div>';
+        }
+
+        if (data.schedule_items.length > 0) {
+          html += '<div class="schedule-timeline"><h4>📋 Today\'s Schedule</h4>';
+          data.schedule_items.forEach(item => {
+            const typeIcon = item.type === 'event' ? '📅' : '📋';
+            const priorityClass = item.priority === 'high' ? 'high-priority' : item.priority === 'low' ? 'low-priority' : 'medium-priority';
+
+            html += `
+              <div class="timeline-item ${priorityClass}" data-${item.type === 'event' ? 'event' : 'task'}-id="${item.id}">
+                <div class="timeline-time">${item.start_time}${item.end_time ? ' - ' + item.end_time : ''}</div>
+                <div class="timeline-content">
+                  <div class="timeline-title">${typeIcon} ${item.title}</div>
+                  ${item.description ? `<div class="timeline-description">${item.description}</div>` : ''}
+                  ${item.location ? `<div class="timeline-location">📍 ${item.location}</div>` : ''}
+                  ${item.project_title ? `<div class="timeline-project">Project: ${item.project_title}</div>` : ''}
+                </div>
+                <div class="timeline-actions">
+                  ${item.completed ?
+                    `<button class="btn-small btn-secondary" onclick="${item.type === 'event' ? 'completeEvent' : 'uncompleteTask'}(${item.id})">✅</button>` :
+                    `<button class="btn-small btn-success" onclick="${item.type === 'event' ? 'completeEvent' : 'completeTask'}(${item.id})">⏳</button>`
+                  }
+                </div>
+              </div>
+            `;
+          });
+          html += '</div>';
+        }
+
+        // Add project tasks section
+        if (data.project_tasks && data.project_tasks.length > 0) {
+          html += `
+            <div class="project-tasks-section">
+              <h4>🎯 All Project Tasks</h4>
+              <div class="project-tasks-grid">
+          `;
+
+          // Group tasks by project
+          const tasksByProject = {};
+          data.project_tasks.forEach(task => {
+            const projectTitle = task.project_title || 'No Project';
+            if (!tasksByProject[projectTitle]) {
+              tasksByProject[projectTitle] = [];
+            }
+            tasksByProject[projectTitle].push(task);
+          });
+
+          Object.keys(tasksByProject).forEach(projectTitle => {
+            const tasks = tasksByProject[projectTitle];
+            html += `
+              <div class="project-task-group">
+                <h5>${projectTitle}</h5>
+                <div class="task-list-compact">
+            `;
+
+            tasks.slice(0, 5).forEach(task => { // Show first 5 tasks
+              const aiIcon = task.ai_generated ? '🤖' : '';
+              html += `
+                <div class="task-item-compact" data-task-id="${task.id}">
+                  <span class="task-title-compact">${aiIcon} ${task.title}</span>
+                  <button class="btn-small btn-success complete-btn" onclick="completeTask(${task.id})">⏳</button>
+                </div>
+              `;
+            });
+
+            if (tasks.length > 5) {
+              html += `<div class="task-more">+${tasks.length - 5} more tasks</div>`;
+            }
+
+            html += '</div></div>';
+          });
+
+          html += '</div></div>';
+        }
+
+        if (data.schedule_items.length === 0 && (!data.project_tasks || data.project_tasks.length === 0)) {
+          html += '<div class="empty-schedule">📅 No events or tasks for this day</div>';
+        }
+
+        content.innerHTML = html;
+        modal.style.display = 'block';
+      }
+
+      function displayWeeklySchedule(data) {
+        const modal = document.getElementById('schedule-modal');
+        const title = document.getElementById('schedule-modal-title');
+        const content = document.getElementById('schedule-content');
+
+        title.textContent = `📊 Weekly Schedule (${data.week_start} to ${data.week_end})`;
+
+        let html = '<div class="weekly-schedule">';
+
+        data.days.forEach(day => {
+          const dayDate = new Date(day.date);
+          const isToday = day.date === '{{ today_date }}';
+
+          html += `
+            <div class="week-day ${isToday ? 'today' : ''}">
+              <div class="week-day-header">
+                <h4>${day.day_name}</h4>
+                <span class="week-date">${day.date}</span>
+                <div class="day-summary">
+                  ${day.summary.total_events + day.summary.total_tasks_due} items
+                  ${day.summary.total_overdue > 0 ? `| ${day.summary.total_overdue} overdue` : ''}
+                </div>
+              </div>
+              <div class="week-day-content">
+          `;
+
+          if (day.schedule_items.length > 0) {
+            day.schedule_items.slice(0, 3).forEach(item => {
+              const typeIcon = item.type === 'event' ? '📅' : '📋';
+              html += `
+                <div class="week-item">
+                  <span class="week-time">${item.start_time}</span>
+                  <span class="week-title">${typeIcon} ${item.title}</span>
+                </div>
+              `;
+            });
+
+            if (day.schedule_items.length > 3) {
+              html += `<div class="week-more">+${day.schedule_items.length - 3} more</div>`;
+            }
+          } else {
+            html += '<div class="week-empty">No events</div>';
+          }
+
+          html += '</div></div>';
+        });
+
+        html += '</div>';
+
+        content.innerHTML = html;
+        modal.style.display = 'block';
+      }
+
+      function displayProjectSteps(data) {
+        const modal = document.getElementById('schedule-modal');
+        const title = document.getElementById('schedule-modal-title');
+        const content = document.getElementById('schedule-content');
+
+        title.textContent = `🎯 Project Steps Overview`;
+
+        let html = `
+          <div class="project-steps-summary">
+            <div class="summary-stats">
+              <span class="stat-item">📁 ${data.summary.total_projects} projects</span>
+              <span class="stat-item">📋 ${data.summary.total_tasks} total tasks</span>
+              <span class="stat-item">✅ ${data.summary.total_completed} completed</span>
+              <span class="stat-item">📊 ${((data.summary.total_completed / data.summary.total_tasks) * 100).toFixed(1)}% overall progress</span>
+            </div>
+          </div>
+        `;
+
+        if (data.project_steps.length > 0) {
+          html += '<div class="project-steps-container">';
+
+          data.project_steps.forEach(projectData => {
+            const project = projectData.project;
+            const tasks = projectData.tasks;
+            const progress = projectData.progress;
+
+            html += `
+              <div class="project-step-section">
+                <div class="project-step-header">
+                  <h4>${project.title}</h4>
+                  <div class="project-progress">
+                    <span class="progress-text">${progress.completed_tasks}/${progress.total_tasks} tasks</span>
+                    <div class="progress-bar">
+                      <div class="progress-fill" style="width: ${progress.completion_percentage}%"></div>
+                    </div>
+                    <span class="progress-percentage">${progress.completion_percentage.toFixed(1)}%</span>
+                  </div>
+                </div>
+                <div class="project-tasks-list">
+            `;
+
+            tasks.forEach(task => {
+              const priorityClass = task.priority === 'high' ? 'high-priority' : task.priority === 'low' ? 'low-priority' : 'medium-priority';
+              const completedClass = task.completed ? 'completed' : '';
+              const aiIcon = task.ai_generated ? '🤖' : '';
+              const deadlineText = task.deadline ? `Due: ${new Date(task.deadline).toLocaleDateString()}` : '';
+
+              html += `
+                <div class="project-task-item ${priorityClass} ${completedClass}" data-task-id="${task.id}">
+                  <div class="task-content">
+                    <div class="task-title">${aiIcon} ${task.title}</div>
+                    ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
+                    <div class="task-meta">
+                      <span class="task-priority badge badge-${task.priority === 'high' ? 'danger' : task.priority === 'low' ? 'success' : 'warning'}">${task.priority}</span>
+                      ${task.estimated_hours ? `<span class="task-hours">${task.estimated_hours}h</span>` : ''}
+                      ${deadlineText ? `<span class="task-deadline">${deadlineText}</span>` : ''}
+                    </div>
+                  </div>
+                  <div class="task-actions">
+                    <button class="btn-small complete-btn ${task.completed ? 'btn-secondary' : 'btn-success'}"
+                            onclick="${task.completed ? `uncompleteTask(${task.id})` : `completeTask(${task.id})`}">
+                      ${task.completed ? '✅' : '⏳'}
+                    </button>
+                  </div>
+                </div>
+              `;
+            });
+
+            html += '</div></div>';
+          });
+
+          html += '</div>';
+        } else {
+          html += '<div class="empty-projects">📁 No projects with tasks found. Create some projects and tasks to see them here!</div>';
+        }
+
+        content.innerHTML = html;
+        modal.style.display = 'block';
+      }
+
+      function closeScheduleModal() {
+        document.getElementById('schedule-modal').style.display = 'none';
+      }
+
+      // Close modals when clicking outside
+      window.onclick = function(event) {
+        const scheduleModal = document.getElementById('schedule-modal');
+        if (event.target === scheduleModal) {
+          closeScheduleModal();
+        }
+      }
+
+      // Loading Functions
+      function showLoading(message = 'Loading...') {
+        // Create or update loading overlay
+        let loadingOverlay = document.getElementById('loading-overlay');
+        if (!loadingOverlay) {
+          loadingOverlay = document.createElement('div');
+          loadingOverlay.id = 'loading-overlay';
+          loadingOverlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            color: white;
+            font-size: 1.2rem;
+          `;
+          document.body.appendChild(loadingOverlay);
+        }
+        loadingOverlay.innerHTML = `<div style="text-align: center;"><div style="margin-bottom: 1rem;">⏳</div>${message}</div>`;
+        loadingOverlay.style.display = 'flex';
+      }
+
+      function hideLoading() {
+        const loadingOverlay = document.getElementById('loading-overlay');
+        if (loadingOverlay) {
+          loadingOverlay.style.display = 'none';
+        }
+      }
+
+      // Display Functions
+      function displayDailySchedule(data) {
+        const modal = document.getElementById('schedule-modal');
+        const title = document.getElementById('schedule-modal-title');
+        const content = document.getElementById('schedule-content');
+
+        title.textContent = `📅 ${data.day_name} - ${data.date}`;
+
+        let html = `
+          <div class="schedule-summary">
+            <div class="summary-stats">
+              <span class="stat-item">📅 ${data.summary.total_events} events</span>
+              <span class="stat-item">📋 ${data.summary.total_tasks_due} tasks due</span>
+              <span class="stat-item">⚠️ ${data.summary.total_overdue} overdue</span>
+              <span class="stat-item">🔥 ${data.summary.high_priority_items} high priority</span>
+            </div>
+          </div>
+        `;
+
+        if (data.overdue_tasks.length > 0) {
+          html += `
+            <div class="overdue-section">
+              <h4>⚠️ Overdue Tasks</h4>
+              <div class="overdue-list">
+          `;
+          data.overdue_tasks.forEach(task => {
+            html += `
+              <div class="overdue-item">
+                <div class="overdue-title">${task.title}</div>
+                <div class="overdue-meta">
+                  Due: ${task.deadline} | Project: ${task.project_title || 'No project'}
+                </div>
+              </div>
+            `;
+          });
+          html += '</div></div>';
+        }
+
+        if (data.schedule_items.length > 0) {
+          html += '<div class="schedule-timeline"><h4>📋 Today\'s Schedule</h4>';
+          data.schedule_items.forEach(item => {
+            const typeIcon = item.type === 'event' ? '📅' : '📋';
+            const priorityClass = item.priority === 'high' ? 'high-priority' : item.priority === 'low' ? 'low-priority' : 'medium-priority';
+
+            html += `
+              <div class="timeline-item ${priorityClass}" data-${item.type === 'event' ? 'event' : 'task'}-id="${item.id}">
+                <div class="timeline-time">${item.start_time}${item.end_time ? ' - ' + item.end_time : ''}</div>
+                <div class="timeline-content">
+                  <div class="timeline-title">${typeIcon} ${item.title}</div>
+                  ${item.description ? `<div class="timeline-description">${item.description}</div>` : ''}
+                  ${item.location ? `<div class="timeline-location">📍 ${item.location}</div>` : ''}
+                  ${item.project_title ? `<div class="timeline-project">Project: ${item.project_title}</div>` : ''}
+                </div>
+                <div class="timeline-actions">
+                  ${item.completed ?
+                    `<button class="btn-small btn-secondary" onclick="${item.type === 'event' ? 'completeEvent' : 'uncompleteTask'}(${item.id})">✅</button>` :
+                    `<button class="btn-small btn-success" onclick="${item.type === 'event' ? 'completeEvent' : 'completeTask'}(${item.id})">⏳</button>`
+                  }
+                </div>
+              </div>
+            `;
+          });
+          html += '</div>';
+        }
+
+        // Add project tasks section
+        if (data.project_tasks && data.project_tasks.length > 0) {
+          html += `
+            <div class="project-tasks-section">
+              <h4>🎯 All Project Tasks</h4>
+              <div class="project-tasks-grid">
+          `;
+
+          // Group tasks by project
+          const tasksByProject = {};
+          data.project_tasks.forEach(task => {
+            const projectTitle = task.project_title || 'No Project';
+            if (!tasksByProject[projectTitle]) {
+              tasksByProject[projectTitle] = [];
+            }
+            tasksByProject[projectTitle].push(task);
+          });
+
+          Object.keys(tasksByProject).forEach(projectTitle => {
+            const tasks = tasksByProject[projectTitle];
+            html += `
+              <div class="project-task-group">
+                <h5>${projectTitle}</h5>
+                <div class="task-list-compact">
+            `;
+
+            tasks.slice(0, 5).forEach(task => { // Show first 5 tasks
+              const aiIcon = task.ai_generated ? '🤖' : '';
+              html += `
+                <div class="task-item-compact" data-task-id="${task.id}">
+                  <span class="task-title-compact">${aiIcon} ${task.title}</span>
+                  <button class="btn-small btn-success complete-btn" onclick="completeTask(${task.id})">⏳</button>
+                </div>
+              `;
+            });
+
+            if (tasks.length > 5) {
+              html += `<div class="task-more">+${tasks.length - 5} more tasks</div>`;
+            }
+
+            html += '</div></div>';
+          });
+
+          html += '</div></div>';
+        }
+
+        if (data.schedule_items.length === 0 && (!data.project_tasks || data.project_tasks.length === 0)) {
+          html += '<div class="empty-schedule">📅 No events or tasks for this day</div>';
+        }
+
+        content.innerHTML = html;
+        modal.style.display = 'block';
+      }
+
+      function displayWeeklySchedule(data) {
+        const modal = document.getElementById('schedule-modal');
+        const title = document.getElementById('schedule-modal-title');
+        const content = document.getElementById('schedule-content');
+
+        title.textContent = `📊 Weekly Schedule (${data.week_start} to ${data.week_end})`;
+
+        let html = '<div class="weekly-schedule">';
+
+        data.days.forEach(day => {
+          const dayDate = new Date(day.date);
+          const isToday = day.date === '{{ today_date }}';
+
+          html += `
+            <div class="week-day ${isToday ? 'today' : ''}">
+              <div class="week-day-header">
+                <h4>${day.day_name}</h4>
+                <span class="week-date">${day.date}</span>
+                <div class="day-summary">
+                  ${day.summary.total_events + day.summary.total_tasks_due} items
+                  ${day.summary.total_overdue > 0 ? `| ${day.summary.total_overdue} overdue` : ''}
+                </div>
+              </div>
+              <div class="week-day-content">
+          `;
+
+          if (day.schedule_items.length > 0) {
+            day.schedule_items.slice(0, 3).forEach(item => {
+              const typeIcon = item.type === 'event' ? '📅' : '📋';
+              html += `
+                <div class="week-item">
+                  <span class="week-time">${item.start_time}</span>
+                  <span class="week-title">${typeIcon} ${item.title}</span>
+                </div>
+              `;
+            });
+
+            if (day.schedule_items.length > 3) {
+              html += `<div class="week-more">+${day.schedule_items.length - 3} more</div>`;
+            }
+          } else {
+            html += '<div class="week-empty">No events</div>';
+          }
+
+          html += '</div></div>';
+        });
+
+        html += '</div>';
+
+        content.innerHTML = html;
+        modal.style.display = 'block';
+      }
+
+      function displayProjectSteps(data) {
+        const modal = document.getElementById('schedule-modal');
+        const title = document.getElementById('schedule-modal-title');
+        const content = document.getElementById('schedule-content');
+
+        title.textContent = `🎯 Project Steps Overview`;
+
+        let html = `
+          <div class="project-steps-summary">
+            <div class="summary-stats">
+              <span class="stat-item">📁 ${data.summary.total_projects} projects</span>
+              <span class="stat-item">📋 ${data.summary.total_tasks} total tasks</span>
+              <span class="stat-item">✅ ${data.summary.total_completed} completed</span>
+              <span class="stat-item">📊 ${((data.summary.total_completed / data.summary.total_tasks) * 100).toFixed(1)}% overall progress</span>
+            </div>
+          </div>
+        `;
+
+        if (data.project_steps.length > 0) {
+          html += '<div class="project-steps-container">';
+
+          data.project_steps.forEach(projectData => {
+            const project = projectData.project;
+            const tasks = projectData.tasks;
+            const progress = projectData.progress;
+
+            html += `
+              <div class="project-step-section">
+                <div class="project-step-header">
+                  <h4>${project.title}</h4>
+                  <div class="project-progress">
+                    <span class="progress-text">${progress.completed_tasks}/${progress.total_tasks} tasks</span>
+                    <div class="progress-bar">
+                      <div class="progress-fill" style="width: ${progress.completion_percentage}%"></div>
+                    </div>
+                    <span class="progress-percentage">${progress.completion_percentage.toFixed(1)}%</span>
+                  </div>
+                </div>
+                <div class="project-tasks-list">
+            `;
+
+            tasks.forEach(task => {
+              const priorityClass = task.priority === 'high' ? 'high-priority' : task.priority === 'low' ? 'low-priority' : 'medium-priority';
+              const completedClass = task.completed ? 'completed' : '';
+              const aiIcon = task.ai_generated ? '🤖' : '';
+              const deadlineText = task.deadline ? `Due: ${new Date(task.deadline).toLocaleDateString()}` : '';
+
+              html += `
+                <div class="project-task-item ${priorityClass} ${completedClass}" data-task-id="${task.id}">
+                  <div class="task-content">
+                    <div class="task-title">${aiIcon} ${task.title}</div>
+                    ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
+                    <div class="task-meta">
+                      <span class="task-priority badge badge-${task.priority === 'high' ? 'danger' : task.priority === 'low' ? 'success' : 'warning'}">${task.priority}</span>
+                      ${task.estimated_hours ? `<span class="task-hours">${task.estimated_hours}h</span>` : ''}
+                      ${deadlineText ? `<span class="task-deadline">${deadlineText}</span>` : ''}
+                    </div>
+                  </div>
+                  <div class="task-actions">
+                    <button class="btn-small complete-btn ${task.completed ? 'btn-secondary' : 'btn-success'}"
+                            onclick="${task.completed ? `uncompleteTask(${task.id})` : `completeTask(${task.id})`}">
+                      ${task.completed ? '✅' : '⏳'}
+                    </button>
+                  </div>
+                </div>
+              `;
+            });
+
+            html += '</div></div>';
+          });
+
+          html += '</div>';
+        } else {
+          html += '<div class="empty-projects">📁 No projects with tasks found. Create some projects and tasks to see them here!</div>';
+        }
+
+        content.innerHTML = html;
+        modal.style.display = 'block';
+      }
+
+      // Schedule Functions
+      async function showDailySchedule(date) {
+        try {
+          showLoading('Loading daily schedule...');
+
+          const response = await fetch(`/schedule/daily/${date}`);
+          const scheduleData = await response.json();
+
+          if (response.ok) {
+            displayDailySchedule(scheduleData);
+          } else {
+            alert('❌ Failed to load daily schedule');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('❌ Error loading daily schedule');
+        } finally {
+          hideLoading();
+        }
+      }
+
+      async function showWeeklySchedule(date) {
+        try {
+          showLoading('Loading weekly schedule...');
+
+          const response = await fetch(`/schedule/week/${date}`);
+          const scheduleData = await response.json();
+
+          if (response.ok) {
+            displayWeeklySchedule(scheduleData);
+          } else {
+            alert('❌ Failed to load weekly schedule');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('❌ Error loading weekly schedule');
+        } finally {
+          hideLoading();
+        }
+      }
+
+      async function showProjectSteps() {
+        try {
+          showLoading('Loading project steps...');
+
+          const response = await fetch('/schedule/project-steps');
+          const stepsData = await response.json();
+
+          if (response.ok) {
+            displayProjectSteps(stepsData);
+          } else {
+            alert('❌ Failed to load project steps');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('❌ Error loading project steps');
+        } finally {
+          hideLoading();
+        }
+      }
     </script>
 
-</body>
+      <!-- Dashboard Grid for Info Sections -->
+      <div class="dashboard-grid">
+        <!-- Upcoming Reminders -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">🔔 Upcoming Reminders</h3>
+            <span class="badge badge-warning">{{ reminders|length }}</span>
+          </div>
+          <div class="card-content">
+            {% if reminders %}
+            <ul class="reminder-list">
+              {% for reminder in reminders %}
+              <li class="reminder-item">
+                <span class="reminder-date">{{ reminder.due_date.strftime('%Y-%m-%d %H:%M') }}</span>
+                <span class="reminder-message">{{ reminder.message }}</span>
+                <div class="reminder-actions">
+                  {% if not reminder.sent %}
+                    <button class="btn-small btn-success" onclick="generateContent({{ reminder.id }})">
+                      📝 Generate Content
+                    </button>
+                  {% else %}
+                    <span class="badge badge-success">Sent ✅</span>
+                  {% endif %}
+                </div>
+              </li>
+              {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-secondary">No reminders set. Create one above!</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Upload Attachment -->
+        <div class="form-section">
+          <h2>📎 Upload Attachment</h2>
+          <form action="/upload/" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+              <div class="file-upload-area">
+                <div class="upload-icon">📁</div>
+                <input type="file" name="file" required />
+              </div>
+            </div>
+            <div class="form-group">
+              <select name="project_id">
+                <option value="">-- Select Project --</option>
+                {% for project in projects %}
+                <option value="{{ project.id }}">{{ project.title }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <select name="task_id">
+                <option value="">-- Optional Task --</option>
+                {% for project in projects %}
+                  {% for task in project.tasks %}
+                  <option value="{{ task.id }}">
+                    {{ project.title }} → {{ task.title }}
+                  </option>
+                  {% endfor %}
+                {% endfor %}
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Upload File</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Attachments Section -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">📎 Attachments</h3>
+          <span class="badge badge-info">
+            {% set attachment_count = 0 %}
+            {% for project in projects %}
+              {% set attachment_count = attachment_count + project.attachments|length %}
+            {% endfor %}
+            {{ attachment_count }} files
+          </span>
+        </div>
+        <div class="card-content">
+          {% set has_attachments = false %}
+          {% for project in projects %}
+            {% if project.attachments %}
+              {% set has_attachments = true %}
+              {% for attachment in project.attachments %}
+              <div class="attachment-item">
+                <a href="/uploads/{{ attachment.filename }}" target="_blank" class="attachment-link">
+                  📄 {{ attachment.filename }}
+                </a>
+                <span class="attachment-meta">Project: {{ project.title }}</span>
+              </div>
+              {% endfor %}
+            {% endif %}
+          {% endfor %}
+          {% if not has_attachments %}
+          <p class="text-secondary">No attachments yet. Upload some files above!</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </body>
 </html>

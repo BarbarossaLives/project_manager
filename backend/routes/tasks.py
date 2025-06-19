@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Form
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from backend.models import models, schemas
 from backend.dependencies import get_db
-from typing import List  # Added import for List
-from fastapi import APIRouter, Depends, HTTPException, Form
+from typing import List
 
 
 router = APIRouter()
